@@ -209,6 +209,7 @@ __marimo__/
 # Личные настройки и секреты
 .env
 venv/
+.venv/
 .vscode/
 
 # Кэш Python
