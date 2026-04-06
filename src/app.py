@@ -1,31 +1,33 @@
 from flask import Flask, render_template, request, jsonify
-import json
-import os
-# импорт функций
-from parser import fetch_vacancies
+from src.database import DatabaseManager
+# Временно импортируем заглушку для API, пока не напишем реальную
+# from src.api import HeadHunterApi 
+from src.parser import SmartCollector
 
-app = Flask(__name__)
-
-# путь к базе данных JSON
-DATA_FILE = os.path.join(os.path.dirname(__file__), '..', 'data', 'raw_data.json')
+app = Flask(__name__, template_folder='../templates') # Убедись, что папка templates есть!
+db = DatabaseManager()
 
 @app.route('/')
 def index():
-    # загружаем вакансии из JSON, чтобы показать их на главной
-    vacancies = []
-    if os.path.exists(DATA_FILE):
-        with open(DATA_FILE, 'r', encoding='utf-8') as f:
-            vacancies = json.load(f)
-    
-    return render_template('index.html', vacancies=vacancies)
+    # Берем все вакансии из базы для главной страницы
+    raw_vacancies = db.get_all() 
+    # В реальности тут лучше отдавать JSON для фронта или передавать в шаблон
+    return render_template('index.html', count=len(raw_vacancies))
 
 @app.route('/update', methods=['POST'])
-def update_db():
-    # вызываем парсер
-    new_data = fetch_vacancies("Python", "47") 
+async def update_db():
+    # Получаем данные от пользователя (например, из формы или кнопок на фронте)
+    data = request.json
+    city = data.get("city", "Санкт-Петербург")
+    sector = data.get("sector", "Аналитика")
+    days = data.get("days", 7) # По умолчанию неделя
     
-    # возвращаем JSON, чтобы JS на фронте понял, что все ок
-    return jsonify({"status": "success", "count": len(new_data)})
+    # api = HeadHunterApi() # Эту штуку нам еще предстоит написать
+    # collector = SmartCollector(db, api)
+    
+    # Запускаем сбор (await collector.collect_by_params(city, sector, period_days=days))
+    
+    return jsonify({"status": "success", "message": f"Сбор данных для {city} запущен!"})
 
 if __name__ == '__main__':
     app.run(debug=True)

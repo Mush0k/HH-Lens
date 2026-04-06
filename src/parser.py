@@ -1,67 +1,56 @@
-import requests
+import asyncio
+import datetime
 import json
 import os
-from models import Vacancy
+from apscheduler.schedulers.background import BackgroundScheduler
 
-def fetch_vacancies(query: str, area_id: int, pages=3):
-    """Листает страницы и собирает вакансии"""
-    all_results = []
-    url = "https://api.hh.ru/vacancies"
-    
-    for page in range(pages):
-        params = {
-            "text": query,
-            "area": area_id,
-            "page": page,
-            "per_page": 100, # максимум для одной страницы
-            "search_field": "name" 
-        }
+# Вспомогательная функция для загрузки твоих json-конфигов
+def load_config(filename):
+    path = os.path.join(os.path.dirname(__file__), '..', 'configs', filename)
+    with open(path, 'r', encoding='utf-8') as f:
+        return json.load(f)
+
+# Загружаем словари
+CITIES = load_config('areas.json')
+TARGET_ROLES = load_config('roles.json')
+
+class SmartCollector:
+    def __init__(self, db_manager, api_client):
+        self.db = db_manager
+        self.api = api_client
+
+    async def collect_by_params(self, city_name, sector_name, period_days=30):
+        area_id = CITIES.get(city_name)
+        role_ids = TARGET_ROLES.get(sector_name)
         
-        response = requests.get(url, params=params)
-        if response.status_code == 200:
-            items = response.json().get('items', [])
-            if not items:
-                break
-            for item in items:
-                all_results.append(Vacancy(
-                    id=item['id'],
-                    name=item['name'],
-                    area_name=item['area']['name'],
-                    salary_from=item['salary']['from'] if item.get('salary') else None,
-                    salary_to=item['salary']['to'] if item.get('salary') else None,
-                    alternate_url=item['alternate_url']
-                ))
-        else:
-            break
-            
-    return all_results
+        if not area_id or not role_ids:
+            print(f"❌ Ошибка: город '{city_name}' или сфера '{sector_name}' не найдены в конфигах.")
+            return
 
-def update_local_db(new_vacancies):
-    """Добавляет только новые вакансии в файл, избегая дублей"""
-    file_path = 'data/raw_data.json'
-    
-    # 1. загружаем старые данные
-    if os.path.exists(file_path):
-        with open(file_path, 'r', encoding='utf-8') as f:
-            try:
-                old_data = json.load(f)
-            except:
-                old_data = []
-    else:
-        old_data = []
+        end_time = datetime.datetime.now()
+        start_limit = end_time - datetime.timedelta(days=period_days)
+        
+        print(f"🚀 Старт выгрузки: {city_name} | {sector_name} | глубина: {period_days} дн.")
 
-    # 2. объединяем по ID (чтобы не было повторов)
-    existing_ids = {v['id'] for v in old_data}
-    added_count = 0
-    
-    for v in new_vacancies:
-        if v.id not in existing_ids:
-            old_data.append(v.model_dump())
-            existing_ids.add(v.id)
-            added_count += 1
+        current_end = end_time
+        total_saved = 0
+
+        while current_end > start_limit:
+            current_start = current_end - datetime.timedelta(hours=12)
             
-    # 3. сохраняем
-    with open(file_path, 'w', encoding='utf-8') as f:
-        json.dump(old_data, f, ensure_ascii=False, indent=4)
-    
-    print(f"✨ Готово! Добавлено новых вакансий: {added_count}. Всего в базе: {len(old_data)}")
+            vacancies = await self.api.get_vacancies(
+                area=area_id,
+                professional_role=role_ids,
+                date_from=current_start.isoformat(),
+                date_to=current_end.isoformat()
+            )
+            
+            if vacancies:
+                self.db.save_many(vacancies)
+                total_saved += len(vacancies)
+                print(f"✅ Найдено {len(vacancies)} (период {current_start.strftime('%H:%M')} - {current_end.strftime('%H:%M')})")
+            
+            current_end = current_start
+            await asyncio.sleep(0.5)
+            
+        print(f"🎉 Сбор завершен! Всего обработано вакансий: {total_saved}")
