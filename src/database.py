@@ -5,7 +5,7 @@ class DatabaseManager:
     def __init__(self):
         # База будет лежать в папке data/
         db_path = os.path.join(os.path.dirname(__file__), '..', 'data', 'vacancies.db')
-        self.conn = sqlite3.connect(db_path)
+        self.conn = sqlite3.connect('data/vacancies.db', check_same_thread=False)
         self.cursor = self.conn.cursor()
         self.create_tables()
 
