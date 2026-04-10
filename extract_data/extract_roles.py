@@ -25,7 +25,7 @@ def get_clean_areas():
                 "category": category_name  
             })
 
-    # Сохраняем
+    # сохраняем
     with open('roles.json', 'w', encoding='utf-8') as f:
         json.dump(flat_list, f, ensure_ascii=False, indent=4)
     

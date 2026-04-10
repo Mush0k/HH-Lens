@@ -12,7 +12,7 @@ class HeadHunterApi:
     async def get_vacancies(self, area, professional_role, date_from, date_to):
         params = {
             "area": area,
-            "professional_role": professional_role, # Передаем список ролей
+            "professional_role": professional_role,
             "date_from": date_from,
             "date_to": date_to,
             "per_page": 100,
@@ -21,20 +21,20 @@ class HeadHunterApi:
 
         async with httpx.AsyncClient(headers=self.headers) as client:
             try:
-                # Важно: для списков (roles) httpx иногда требует особой обработки
+                # для списков (roles) httpx иногда требует особой обработки
                 response = await client.get(self.base_url, params=params)
                 
                 if response.status_code == 400:
-                    # Если всё еще 400, давай выведем причину (HH пишет её в JSON)
-                    print(f"❌ Детали ошибки 400: {response.text}")
+                    # если все еще 400, то выводим причину 
+                    print(f"Детали ошибки 400: {response.text}")
                     return []
 
                 items = response.json().get('items', [])
                 
-                # Превращаем сырой ответ от HH в список наших объектов Vacancy
+                # превращаем сырой ответ от HH в список объектов Vacancy
                 valid_vacancies = []
                 for item in items:
-                    # Проверяем зарплату (она может быть None)
+                    # проверяем зп
                     salary = item.get('salary')
                     
                     v = Vacancy(
@@ -53,5 +53,5 @@ class HeadHunterApi:
                 return valid_vacancies
 
             except Exception as e:
-                print(f"⚠️ Проблема при запросе к HH: {e}")
+                print(f"Проблема при запросе к HH: {e}")
                 return []

@@ -3,14 +3,14 @@ import os
 
 class DatabaseManager:
     def __init__(self):
-        # База будет лежать в папке data/
+        # база будет лежать в папке data/
         db_path = os.path.join(os.path.dirname(__file__), '..', 'data', 'vacancies.db')
         self.conn = sqlite3.connect('data/vacancies.db', check_same_thread=False)
         self.cursor = self.conn.cursor()
         self.create_tables()
 
     def create_tables(self):
-        # Создаем таблицу, если ее еще нет. id - это PRIMARY KEY (защита от дублей!)
+        # создаем таблицу, если ее еще нет. id - это PRIMARY KEY 
         self.cursor.execute('''
             CREATE TABLE IF NOT EXISTS vacancies (
                 id TEXT PRIMARY KEY,
@@ -34,7 +34,7 @@ class DatabaseManager:
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         '''
         
-        # Превращаем объекты Pydantic в кортежи для базы
+        # превращаем объекты Pydantic в кортежи для базы
         data = [
             (v.id, v.name, v.area_name, v.salary_from, v.salary_to, 
              v.experience, v.requirement, v.responsibility, v.alternate_url) 
@@ -45,6 +45,6 @@ class DatabaseManager:
         self.conn.commit()
 
     def get_all(self):
-        # Эта функция пригодится для Фласка, чтобы отдавать данные на фронт
+        # эта функция для Фласка, чтобы отдавать данные
         self.cursor.execute('SELECT * FROM vacancies')
         return self.cursor.fetchall()

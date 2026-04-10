@@ -2,36 +2,108 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>HH-Lens</title>
+    <title>HH-Lens | Dashboard</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
     <style>
-        body { background-color: #f8f9fa; }
-        .vacancy-card { transition: 0.3s; border-radius: 10px; }
-        .vacancy-card:hover { transform: translateY(-5px); box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
-        .salary { color: #28a745; font-weight: bold; }
+        body { background-color: #121212; color: #e0e0e0; } /* Тёмная тема */
+        .vacancy-card { background-color: #1e1e1e; border: 1px solid #333; transition: 0.3s; }
+        .vacancy-card:hover { border-color: #0d6efd; transform: translateY(-3px); }
+        .salary { color: #4caf50; font-weight: bold; }
+        .control-panel { background-color: #1e1e1e; border-radius: 15px; padding: 20px; margin-bottom: 30px; border: 1px solid #333; }
+        select, input { background-color: #2c2c2c !important; color: white !important; border: 1px solid #444 !important; }
     </style>
 </head>
 <body>
 <div class="container py-5">
+    
+    <div class="control-panel shadow">
+        <h3 class="mb-4">Настройка поиска</h3>
+        <div class="row g-3">
+            <div class="col-md-4">
+                <label class="form-label">Город</label>
+                <select id="citySelect" class="form-select">
+                    {% for area in areas %}
+                    <option value="{{ area.name }}">{{ area.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Специальность</label>
+                <select id="roleSelect" class="form-select">
+                    {% for role in roles %}
+                    <option value="{{ role.id }}">{{ role.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Период</label>
+                <select id="periodSelect" class="form-select">
+                    {% for val, label in periods %}
+                    <option value="{{ val }}">{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2 d-flex align-items-end">
+                <button onclick="updateData()" class="btn btn-primary w-100">Обновить</button>
+            </div>
+        </div>
+    </div>
+
     <h1 class="mb-4 text-center">Найдено вакансий: {{ vacancies|length }}</h1>
-    <div class="row row-cols-1 row-cols-md-2 g-4">
+    
+    <div class="row row-cols-1 row-cols-md-2 g-4" id="vacancyList">
         {% for v in vacancies %}
         <div class="col">
             <div class="card h-100 vacancy-card shadow-sm">
                 <div class="card-body">
-                    <h5 class="card-title">{{ v[1] }}</h5> <h6 class="card-subtitle mb-2 text-muted">{{ v[2] }} | {{ v[5] }}</h6> <p class="salary">
+                    <h5 class="card-title text-white">{{ v[1] }}</h5>
+                    <h6 class="card-subtitle mb-2 text-muted">{{ v[2] }} | {{ v[5] }}</h6>
+                    <p class="salary">
                         {% if v[3] or v[4] %}
                             от {{ v[3] or 0 }} до {{ v[4] or '...' }} руб.
                         {% else %}
                             З/П не указана
                         {% endif %}
                     </p>
-                    <p class="card-text text-truncate">{{ v[6] }}</p> <a href="{{ v[8] }}" target="_blank" class="btn btn-primary btn-sm">Открыть на HH</a>
+                    <p class="card-text text-truncate">{{ v[6] }}</p>
+                    <a href="{{ v[8] }}" target="_blank" class="btn btn-outline-primary btn-sm">Открыть на HH</a>
                 </div>
             </div>
         </div>
         {% endfor %}
     </div>
 </div>
+
+<script>
+async function updateData() {
+    const btn = event.target;
+    btn.disabled = true;
+    btn.innerText = 'Загрузка...';
+
+    const payload = {
+        city: document.getElementById('citySelect').value,
+        role_id: document.getElementById('roleSelect').value,
+        days: document.getElementById('periodSelect').value
+    };
+
+    try {
+        const response = await fetch('/update', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        
+        if (response.ok) {
+            alert('Данные обновлены! Перезагружаю страницу...');
+            location.reload(); // Перезагружаем, чтобы увидеть новые вакансии
+        }
+    } catch (e) {
+        alert('Ошибка при обновлении');
+    } finally {
+        btn.disabled = false;
+        btn.innerText = 'Обновить';
+    }
+}
+</script>
 </body>
 </html>
