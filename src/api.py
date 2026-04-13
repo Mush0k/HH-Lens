@@ -9,16 +9,16 @@ class HeadHunterApi:
             'Accept': 'application/json',
         }
 
-    async def get_vacancies(self, area, professional_role, date_from, date_to):
+    async def get_vacancies(self, area, professional_role, date_from, date_to, page=0, per_page=100):
         params = {
-            "area": area,
-            "professional_role": professional_role,
-            "date_from": date_from,
-            "date_to": date_to,
-            "per_page": 100,
-            "order_by": "publication_time"
-        }
-
+           "area": area,
+           "professional_role": professional_role,
+           "date_from": date_from,
+           "date_to": date_to,
+           "per_page": per_page, 
+           "page": page,
+           "order_by": "publication_time"
+ }
         async with httpx.AsyncClient(headers=self.headers) as client:
             try:
                 # для списков (roles) httpx иногда требует особой обработки

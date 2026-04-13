@@ -42,21 +42,32 @@ class SmartCollector:
         total_saved = 0
 
         while current_end > start_limit:
-            current_start = current_end - datetime.timedelta(hours=12)
+            current_start = current_end - datetime.timedelta(hours=3) 
             
-            vacancies = await self.api.get_vacancies(
-                area=area_id,
-                professional_role=role_ids,
-                date_from=current_start.isoformat(),
-                date_to=current_end.isoformat()
-            )
-            
-            if vacancies:
+            # ДЦИКЛ ПО СТРАНИЦАМ (от 0 до 19)
+            for page in range(20):
+                vacancies = await self.api.get_vacancies(
+                    area=area_id,
+                    professional_role=role_ids,
+                    date_from=current_start.isoformat(),
+                    date_to=current_end.isoformat(),
+                    page=page,       # запрашиваем конкретную страницу
+                    per_page=100     # просим макс на страницу
+                )
+                
+                if not vacancies:
+                    break # если API ничего не вернул, выходим из цикла страниц
+                
                 self.db.save_many(vacancies)
                 total_saved += len(vacancies)
-                print(f"Найдено {len(vacancies)} (период {current_start.strftime('%H:%M')} - {current_end.strftime('%H:%M')})")
-            
+                print(f"Найдено {len(vacancies)} (период {current_start.strftime('%H:%M')}-{current_end.strftime('%H:%M')}, стр. {page})")
+                
+                # если на странице меньше 100 вакансий, значит это последняя страница, дальше пусто
+                if len(vacancies) < 100:
+                    break 
+                
+                await asyncio.sleep(0.5) # пауза между страницами, чтобы HH не забанил
+                
             current_end = current_start
-            await asyncio.sleep(0.5)
             
         print(f"Сбор завершен! Всего обработано вакансий: {total_saved}")
